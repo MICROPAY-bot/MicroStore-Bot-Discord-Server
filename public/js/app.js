@@ -1,0 +1,519 @@
+/* MICROSTORE_OS dashboard app logic (vanilla JS, no framework/build step) */
+
+const state = {
+  guildId: null,
+  view: 'overview',
+  meta: null, // { channels, roles } for the current guild
+};
+
+const content = document.getElementById('content');
+
+function fmtRupiah(n) {
+  return 'Rp' + Number(n || 0).toLocaleString('id-ID');
+}
+function fmtDate(d) {
+  if (!d) return '-';
+  return new Date(d).toLocaleString('id-ID');
+}
+function escapeHtml(s) {
+  return String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function toast(message, isDanger = false) {
+  const el = document.createElement('div');
+  el.className = 'toast' + (isDanger ? ' danger' : '');
+  el.textContent = message;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+function setLoading() {
+  content.innerHTML = '<div class="loading">MEMUAT DATA...</div>';
+}
+
+// ---------- Bootstrap: auth + guild selector ----------
+
+async function bootstrap() {
+  let me;
+  try {
+    const res = await fetch('/auth/me', { credentials: 'same-origin' });
+    if (!res.ok) throw new Error();
+    me = await res.json();
+  } catch {
+    window.location.href = '/index.html';
+    return;
+  }
+
+  document.getElementById('user-name').textContent = me.user.username;
+  document.getElementById('user-avatar').src = me.user.avatar
+    ? `https://cdn.discordapp.com/avatars/${me.user.id}/${me.user.avatar}.png`
+    : 'https://cdn.discordapp.com/embed/avatars/0.png';
+
+  const select = document.getElementById('guild-select');
+  if (!me.guilds.length) {
+    content.innerHTML = `<div class="empty-state">
+      Anda login tapi belum ada server yang cocok.<br><br>
+      Pastikan bot MICROSTORE sudah di-invite ke server Anda, dan Anda punya<br>
+      izin <strong>Manage Server</strong> di server tersebut.
+    </div>`;
+    select.style.display = 'none';
+    return;
+  }
+
+  select.innerHTML = me.guilds.map((g) => `<option value="${g.id}">${escapeHtml(g.name)}</option>`).join('');
+  select.addEventListener('change', () => {
+    state.guildId = select.value;
+    loadGuildMeta().then(() => renderView());
+  });
+
+  state.guildId = me.guilds[0].id;
+  await loadGuildMeta();
+  renderView();
+}
+
+async function loadGuildMeta() {
+  try {
+    state.meta = await Api.get(`/api/dashboard/guilds/${state.guildId}/meta`);
+  } catch (err) {
+    state.meta = { channels: [], roles: [] };
+    toast('Gagal memuat data server: ' + err.message, true);
+  }
+}
+
+// ---------- Nav wiring ----------
+
+document.querySelectorAll('.nav-item').forEach((el) => {
+  el.addEventListener('click', () => {
+    document.querySelectorAll('.nav-item').forEach((n) => n.classList.remove('active'));
+    el.classList.add('active');
+    state.view = el.dataset.view;
+    renderView();
+  });
+});
+document.querySelector('.nav-item[data-view="overview"]').classList.add('active');
+
+function logout() {
+  Api.post('/auth/logout').finally(() => { window.location.href = '/index.html'; });
+}
+
+function renderView() {
+  setLoading();
+  const renderers = {
+    overview: renderOverview,
+    products: renderProducts,
+    orders: renderOrders,
+    payments: renderPayments,
+    youtube: renderYoutube,
+    settings: renderSettings,
+    logs: renderLogs,
+    backups: renderBackups,
+  };
+  (renderers[state.view] || renderOverview)().catch((err) => {
+    content.innerHTML = `<div class="empty-state text-danger">ERROR: ${escapeHtml(err.message)}</div>`;
+  });
+}
+
+// ---------- Overview / Analytics ----------
+
+async function renderOverview() {
+  const s = await Api.get(`/api/dashboard/guilds/${state.guildId}/analytics`);
+
+  const statusBadge = (status) => {
+    const map = { approved: 'success', pending: 'pending', rejected: 'danger' };
+    return `<span class="badge badge-${map[status] || 'dim'}">${escapeHtml(status)}</span>`;
+  };
+
+  content.innerHTML = `
+    <h1 class="page-title">Store Analytics</h1>
+    <div class="page-subtitle">// Ringkasan performa toko — guild ${state.guildId}</div>
+
+    <div class="stat-grid">
+      ${statCard('Total Revenue', fmtRupiah(s.totalRevenue))}
+      ${statCard('Approved Payments', s.approvedPayments)}
+      ${statCard('Total Orders', s.totalOrders)}
+      ${statCard('Unique Buyers', s.uniqueBuyers)}
+      ${statCard('Avg. Order Value', fmtRupiah(s.avgOrderValue))}
+    </div>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+      <div class="hud-panel">
+        <span class="corner-bl"></span><span class="corner-br"></span>
+        <div class="panel-title">Orders by Status</div>
+        ${s.ordersByStatus.length
+          ? `<table><tbody>${s.ordersByStatus.map((o) => `<tr><td>${statusBadge(o.status)}</td><td class="mono text-dim">${o.count}</td></tr>`).join('')}</tbody></table>`
+          : `<div class="empty-state">Belum ada order</div>`}
+      </div>
+
+      <div class="hud-panel">
+        <span class="corner-bl"></span><span class="corner-br"></span>
+        <div class="panel-title">Top Products</div>
+        ${s.topProducts.length
+          ? `<table><tbody>${s.topProducts.map((p, i) => `<tr><td>#${i + 1} ${escapeHtml(p.name)}</td><td class="mono text-cyan">${fmtRupiah(p.revenue)}</td></tr>`).join('')}</tbody></table>`
+          : `<div class="empty-state">Belum ada data penjualan</div>`}
+      </div>
+    </div>
+
+    <div class="hud-panel" style="margin-top:1rem;">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Recent Sales</div>
+      <div id="recent-sales"><div class="loading">memuat...</div></div>
+    </div>
+  `;
+
+  const sales = await Api.get(`/api/dashboard/guilds/${state.guildId}/analytics/recent-sales?limit=8`);
+  document.getElementById('recent-sales').innerHTML = sales.length
+    ? `<table><thead><tr><th>Buyer</th><th>Produk</th><th>Jumlah</th><th>Waktu</th></tr></thead><tbody>
+        ${sales.map((s) => `<tr><td class="mono">${s.user_id}</td><td>${escapeHtml(s.product_name)}</td><td class="mono text-success">${fmtRupiah(s.amount)}</td><td class="mono text-dim">${fmtDate(s.reviewed_at)}</td></tr>`).join('')}
+      </tbody></table>`
+    : `<div class="empty-state">Belum ada penjualan</div>`;
+}
+
+function statCard(label, value) {
+  return `<div class="hud-panel"><span class="corner-bl"></span><span class="corner-br"></span>
+    <div class="stat-value">${value}</div><div class="stat-label">${label}</div></div>`;
+}
+
+// ---------- Products ----------
+
+async function renderProducts() {
+  const products = await Api.get(`/api/dashboard/guilds/${state.guildId}/products`);
+
+  content.innerHTML = `
+    <h1 class="page-title">Produk</h1>
+    <div class="page-subtitle">// Kelola produk yang dijual di toko</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Tambah Produk Baru</div>
+      <form id="product-form">
+        <label>Nama Produk</label>
+        <input name="name" required>
+        <label>Harga (Rp)</label>
+        <input name="price" type="number" required min="0">
+        <label>Tipe</label>
+        <select name="type">
+          <option value="general">General (kirim teks delivery content)</option>
+          <option value="joki_quest">Joki Quest (form login + target quest)</option>
+          <option value="auto_quest_vip">Auto Quest VIP (kirim file zip)</option>
+          <option value="web_panel">Web Panel (form nama website/brand/domain)</option>
+        </select>
+        <label>Deskripsi</label>
+        <input name="description">
+        <label>Delivery Content (dikirim otomatis ke buyer, untuk tipe General)</label>
+        <textarea name="delivery_content" rows="3"></textarea>
+        <div style="margin-top:1.2rem;"><button class="btn" type="submit">+ Tambah Produk</button></div>
+      </form>
+    </div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Daftar Produk (${products.length})</div>
+      <div id="product-list"></div>
+    </div>
+  `;
+
+  const renderList = (list) => {
+    document.getElementById('product-list').innerHTML = list.length
+      ? `<table><thead><tr><th>ID</th><th>Nama</th><th>Harga</th><th>Tipe</th></tr></thead><tbody>
+          ${list.map((p) => `<tr><td class="mono">#${p.id}</td><td>${escapeHtml(p.name)}</td><td class="mono text-cyan">${fmtRupiah(p.price)}</td><td><span class="badge badge-dim">${escapeHtml(p.type)}</span></td></tr>`).join('')}
+        </tbody></table>`
+      : `<div class="empty-state">Belum ada produk. Tambahkan lewat form di atas.</div>`;
+  };
+  renderList(products);
+
+  document.getElementById('product-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/products`, {
+        name: fd.get('name'),
+        price: fd.get('price'),
+        type: fd.get('type'),
+        description: fd.get('description'),
+        delivery_content: fd.get('delivery_content'),
+      });
+      toast('Produk berhasil ditambahkan');
+      renderProducts();
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+}
+
+// ---------- Orders ----------
+
+async function renderOrders() {
+  const orders = await Api.get(`/api/dashboard/guilds/${state.guildId}/orders`);
+  const statusBadge = (status) => {
+    const map = { completed: 'success', pending: 'pending', cancelled: 'danger' };
+    return `<span class="badge badge-${map[status] || 'dim'}">${escapeHtml(status)}</span>`;
+  };
+
+  content.innerHTML = `
+    <h1 class="page-title">Orders</h1>
+    <div class="page-subtitle">// Riwayat order buyer (read-only — kelola lewat Discord)</div>
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      ${orders.length
+        ? `<table><thead><tr><th>ID</th><th>Buyer</th><th>Produk</th><th>Qty</th><th>Status</th><th>Dibuat</th></tr></thead><tbody>
+            ${orders.map((o) => `<tr><td class="mono">#${o.id}</td><td class="mono">${o.user_id}</td><td class="mono">#${o.product_id}</td><td>${o.quantity}</td><td>${statusBadge(o.status)}</td><td class="mono text-dim">${fmtDate(o.created_at)}</td></tr>`).join('')}
+          </tbody></table>`
+        : `<div class="empty-state">Belum ada order</div>`}
+    </div>
+  `;
+}
+
+// ---------- Payments ----------
+
+async function renderPayments() {
+  const payments = await Api.get(`/api/dashboard/guilds/${state.guildId}/payments`);
+  const statusBadge = (status) => {
+    const map = { approved: 'success', pending: 'pending', rejected: 'danger' };
+    return `<span class="badge badge-${map[status] || 'dim'}">${escapeHtml(status)}</span>`;
+  };
+
+  content.innerHTML = `
+    <h1 class="page-title">Payments</h1>
+    <div class="page-subtitle">// Riwayat pembayaran QRIS (approve/reject lewat tombol Discord)</div>
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      ${payments.length
+        ? `<table><thead><tr><th>ID</th><th>Buyer</th><th>Order</th><th>Jumlah</th><th>Status</th><th>Reviewed</th></tr></thead><tbody>
+            ${payments.map((p) => `<tr><td class="mono">#${p.id}</td><td class="mono">${p.user_id}</td><td class="mono">#${p.order_id}</td><td class="mono text-cyan">${fmtRupiah(p.amount)}</td><td>${statusBadge(p.status)}</td><td class="mono text-dim">${fmtDate(p.reviewed_at)}</td></tr>`).join('')}
+          </tbody></table>`
+        : `<div class="empty-state">Belum ada pembayaran</div>`}
+    </div>
+  `;
+}
+
+// ---------- YouTube ----------
+
+async function renderYoutube() {
+  const channels = await Api.get(`/api/dashboard/guilds/${state.guildId}/youtube/channels`);
+  const textChannels = state.meta?.channels || [];
+
+  content.innerHTML = `
+    <h1 class="page-title">YouTube Monitor</h1>
+    <div class="page-subtitle">// Notifikasi otomatis saat ada video baru</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Tambah Channel</div>
+      <form id="yt-form">
+        <label>YouTube Channel ID (format UCxxxxxxxx)</label>
+        <input name="youtube_channel_id" required placeholder="UCxxxxxxxxxxxxxxxxxxxxxx">
+        <label>Nama Channel</label>
+        <input name="youtube_channel_name" required>
+        <label>Kirim notifikasi ke channel Discord</label>
+        <select name="discord_channel_id" required>
+          ${textChannels.map((c) => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('')}
+        </select>
+        <div style="margin-top:1.2rem;"><button class="btn" type="submit">+ Tambah Channel</button></div>
+      </form>
+    </div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Channel Dimonitor (${channels.length})</div>
+      <div id="yt-list"></div>
+    </div>
+  `;
+
+  const renderList = (list) => {
+    document.getElementById('yt-list').innerHTML = list.length
+      ? `<table><thead><tr><th>Channel</th><th>Notif ke</th><th>Last Check</th><th></th></tr></thead><tbody>
+          ${list.map((c) => `<tr>
+              <td><a href="https://www.youtube.com/channel/${c.youtube_channel_id}" target="_blank">${escapeHtml(c.youtube_channel_name)}</a></td>
+              <td class="mono">#${(textChannels.find(t => t.id === c.channel_id) || {}).name || c.channel_id}</td>
+              <td class="mono text-dim">${fmtDate(c.last_check)}</td>
+              <td><button class="btn btn-danger" data-id="${c.id}" style="padding:0.3rem 0.7rem;font-size:0.7rem;">Hapus</button></td>
+            </tr>`).join('')}
+        </tbody></table>`
+      : `<div class="empty-state">Belum ada channel dimonitor</div>`;
+
+    document.querySelectorAll('#yt-list button[data-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Hapus channel ini dari monitoring?')) return;
+        try {
+          await Api.delete(`/api/dashboard/youtube/channels/${btn.dataset.id}`);
+          toast('Channel dihapus');
+          renderYoutube();
+        } catch (err) {
+          toast('Gagal: ' + err.message, true);
+        }
+      });
+    });
+  };
+  renderList(channels);
+
+  document.getElementById('yt-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    try {
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/youtube/channels`, {
+        youtube_channel_id: fd.get('youtube_channel_id'),
+        youtube_channel_name: fd.get('youtube_channel_name'),
+        discord_channel_id: fd.get('discord_channel_id'),
+      });
+      toast('Channel ditambahkan');
+      renderYoutube();
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+}
+
+// ---------- Settings ----------
+
+async function renderSettings() {
+  const settings = await Api.get(`/api/dashboard/guilds/${state.guildId}/settings`);
+  const channels = state.meta?.channels || [];
+  const roles = state.meta?.roles || [];
+
+  const channelOptions = (selected) =>
+    `<option value="">— Pilih channel —</option>` +
+    channels.map((c) => `<option value="${c.id}" ${c.id === selected ? 'selected' : ''}>#${escapeHtml(c.name)}</option>`).join('');
+  const roleOptions = (selected) =>
+    `<option value="">— Pilih role —</option>` +
+    roles.map((r) => `<option value="${r.id}" ${r.id === selected ? 'selected' : ''}>${escapeHtml(r.name)}</option>`).join('');
+
+  content.innerHTML = `
+    <h1 class="page-title">Settings</h1>
+    <div class="page-subtitle">// Konfigurasi server — sama seperti command /setup-*</div>
+
+    <form id="settings-form">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+        <div class="hud-panel">
+          <span class="corner-bl"></span><span class="corner-br"></span>
+          <div class="panel-title">Welcome</div>
+          <label>Channel Welcome</label>
+          <select name="welcome_channel">${channelOptions(settings.welcome_channel)}</select>
+          <label>Role Otomatis</label>
+          <select name="welcome_role">${roleOptions(settings.welcome_role)}</select>
+          <label>Pesan Welcome</label>
+          <textarea name="welcome_message" rows="2">${escapeHtml(settings.welcome_message || '')}</textarea>
+        </div>
+
+        <div class="hud-panel">
+          <span class="corner-bl"></span><span class="corner-br"></span>
+          <div class="panel-title">Verification</div>
+          <label>Channel Verifikasi</label>
+          <select name="verify_channel">${channelOptions(settings.verify_channel)}</select>
+          <label>Role Setelah Verifikasi</label>
+          <select name="verify_role">${roleOptions(settings.verify_role)}</select>
+        </div>
+
+        <div class="hud-panel">
+          <span class="corner-bl"></span><span class="corner-br"></span>
+          <div class="panel-title">Roles &amp; Admin</div>
+          <label>Buyer Role</label>
+          <select name="buyer_role">${roleOptions(settings.buyer_role)}</select>
+          <label>Admin Role (approve payment)</label>
+          <select name="admin_role">${roleOptions(settings.admin_role)}</select>
+        </div>
+
+        <div class="hud-panel">
+          <span class="corner-bl"></span><span class="corner-br"></span>
+          <div class="panel-title">Payment &amp; Logs</div>
+          <label>Log Channel</label>
+          <select name="log_channel">${channelOptions(settings.log_channel)}</select>
+          <label>QRIS Image URL</label>
+          <input name="qris_image_url" value="${escapeHtml(settings.qris_image_url || '')}" placeholder="https://...">
+        </div>
+      </div>
+
+      <div style="margin-top:1.2rem;"><button class="btn" type="submit">💾 Simpan Settings</button></div>
+    </form>
+  `;
+
+  document.getElementById('settings-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const body = Object.fromEntries(fd.entries());
+    try {
+      await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
+      toast('Settings disimpan');
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+}
+
+// ---------- Logs & Transcripts ----------
+
+async function renderLogs() {
+  const [logs, transcripts] = await Promise.all([
+    Api.get(`/api/dashboard/guilds/${state.guildId}/logs`),
+    Api.get(`/api/dashboard/guilds/${state.guildId}/transcripts`),
+  ]);
+
+  content.innerHTML = `
+    <h1 class="page-title">Logs &amp; Transcripts</h1>
+    <div class="page-subtitle">// Riwayat aktivitas dan transkrip tiket</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Activity Log</div>
+      ${logs.length
+        ? `<div class="mono" style="max-height:320px; overflow-y:auto; font-size:0.82rem; line-height:1.7;">
+            ${logs.map((l) => `<div><span class="text-dim">${fmtDate(l.created_at)}</span> <span class="badge badge-dim">${escapeHtml(l.type)}</span> ${escapeHtml(l.message)}</div>`).join('')}
+          </div>`
+        : `<div class="empty-state">Belum ada log</div>`}
+    </div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Ticket Transcripts</div>
+      ${transcripts.length
+        ? `<table><thead><tr><th>Channel</th><th>Tipe</th><th>Exported</th><th></th></tr></thead><tbody>
+            ${transcripts.map((t) => `<tr><td>${escapeHtml(t.channel_name)}</td><td><span class="badge badge-dim">${escapeHtml(t.ticket_type)}</span></td><td class="mono text-dim">${fmtDate(t.exported_at)}</td><td><a class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.7rem;" href="/api/dashboard/transcripts/${t.id}/download">Download</a></td></tr>`).join('')}
+          </tbody></table>`
+        : `<div class="empty-state">Belum ada transcript</div>`}
+    </div>
+  `;
+}
+
+// ---------- Backups ----------
+
+async function renderBackups() {
+  const backups = await Api.get('/api/dashboard/backups');
+
+  content.innerHTML = `
+    <h1 class="page-title">Database Backups</h1>
+    <div class="page-subtitle">// Backup mencakup seluruh database (semua server)</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="flex justify-between items-center">
+        <div class="panel-title" style="margin:0;">Backup Tersimpan (${backups.length})</div>
+        <button class="btn" id="create-backup-btn">+ Buat Backup Sekarang</button>
+      </div>
+      <div id="backup-list" style="margin-top:1rem;"></div>
+    </div>
+  `;
+
+  const renderList = (list) => {
+    document.getElementById('backup-list').innerHTML = list.length
+      ? `<table><thead><tr><th>Filename</th><th>Ukuran</th><th>Dibuat</th><th></th></tr></thead><tbody>
+          ${list.map((b) => `<tr><td class="mono">${escapeHtml(b.filename)}</td><td class="mono">${(b.sizeBytes / 1024).toFixed(1)} KB</td><td class="mono text-dim">${fmtDate(b.createdAt)}</td><td><a class="btn btn-ghost" style="padding:0.3rem 0.7rem;font-size:0.7rem;" href="/api/dashboard/backups/${b.filename}/download">Download</a></td></tr>`).join('')}
+        </tbody></table>`
+      : `<div class="empty-state">Belum ada backup. Klik "Buat Backup Sekarang".</div>`;
+  };
+  renderList(backups);
+
+  document.getElementById('create-backup-btn').addEventListener('click', async (e) => {
+    e.target.disabled = true;
+    e.target.textContent = 'Membuat backup...';
+    try {
+      await Api.post('/api/dashboard/backups', { triggeredBy: 'dashboard-ui' });
+      toast('Backup berhasil dibuat');
+      renderBackups();
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+      e.target.disabled = false;
+      e.target.textContent = '+ Buat Backup Sekarang';
+    }
+  });
+}
+
+bootstrap();
