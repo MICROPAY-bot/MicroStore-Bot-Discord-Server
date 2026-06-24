@@ -17,6 +17,17 @@ module.exports = {
   },
 
   /**
+   * Disable (soft-delete) a product so it no longer appears in listings/order panel.
+   * Returns the product that was disabled, or null if it doesn't exist / belongs to another guild.
+   */
+  disableProduct(guildId, productId) {
+    const product = productRepo.getById(productId);
+    if (!product || product.guild_id !== guildId) return null;
+    productRepo.disable(productId);
+    return product;
+  },
+
+  /**
    * Deliver the purchased product to the buyer inside the order channel.
    * Branches by product.type:
    *  - joki_quest      -> sends the multi-step Joki Quest form (Username/UID/Target/Email/Password/Catatan)

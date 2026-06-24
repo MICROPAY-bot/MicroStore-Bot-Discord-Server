@@ -27,6 +27,13 @@ module.exports = {
         return;
       }
 
+      if (interaction.isAutocomplete()) {
+        const command = interaction.client.commands.get(interaction.commandName);
+        if (!command || !command.autocomplete) return;
+        await command.autocomplete(interaction);
+        return;
+      }
+
       if (interaction.isButton() || interaction.isStringSelectMenu() || interaction.isModalSubmit()) {
         const handler =
           staticHandlers.get(interaction.customId) ||
