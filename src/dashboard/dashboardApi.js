@@ -10,6 +10,7 @@ const youtubeChannelRepo = require('../repositories/youtubeChannelRepo');
 const youtubeVideoRepo = require('../repositories/youtubeVideoRepo');
 const AnalyticsService = require('../services/AnalyticsService');
 const BackupService = require('../services/BackupService');
+const ProductService = require('../services/ProductService');
 
 const router = express.Router();
 
@@ -119,6 +120,14 @@ router.post('/guilds/:guildId/products', (req, res) => {
     deliveryContent: delivery_content || '',
   });
   res.json(product);
+});
+
+router.delete('/guilds/:guildId/products/:productId', (req, res) => {
+  const product = ProductService.disableProduct(req.params.guildId, Number(req.params.productId));
+  if (!product) {
+    return res.status(404).json({ error: 'Product not found' });
+  }
+  res.json({ success: true, deleted: product });
 });
 
 // --- ORDERS API ---

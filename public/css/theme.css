@@ -187,6 +187,7 @@ h1, h2, h3, .display {
 
 .btn-danger { border-color: var(--danger); color: var(--danger); }
 .btn-danger:hover { background: var(--danger); color: var(--bg-void); box-shadow: 0 0 16px var(--danger); }
+.btn-sm { padding: 0.3rem 0.8rem; font-size: 0.78rem; }
 
 /* ---------- Form controls ---------- */
 input, select, textarea {

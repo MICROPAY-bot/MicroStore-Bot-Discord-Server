@@ -214,10 +214,24 @@ async function renderProducts() {
 
   const renderList = (list) => {
     document.getElementById('product-list').innerHTML = list.length
-      ? `<table><thead><tr><th>ID</th><th>Nama</th><th>Harga</th><th>Tipe</th></tr></thead><tbody>
-          ${list.map((p) => `<tr><td class="mono">#${p.id}</td><td>${escapeHtml(p.name)}</td><td class="mono text-cyan">${fmtRupiah(p.price)}</td><td><span class="badge badge-dim">${escapeHtml(p.type)}</span></td></tr>`).join('')}
+      ? `<table><thead><tr><th>ID</th><th>Nama</th><th>Harga</th><th>Tipe</th><th></th></tr></thead><tbody>
+          ${list.map((p) => `<tr><td class="mono">#${p.id}</td><td>${escapeHtml(p.name)}</td><td class="mono text-cyan">${fmtRupiah(p.price)}</td><td><span class="badge badge-dim">${escapeHtml(p.type)}</span></td><td><button class="btn btn-danger btn-sm" data-delete-id="${p.id}">Hapus</button></td></tr>`).join('')}
         </tbody></table>`
       : `<div class="empty-state">Belum ada produk. Tambahkan lewat form di atas.</div>`;
+
+    document.querySelectorAll('[data-delete-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-delete-id');
+        if (!confirm('Yakin ingin menghapus produk ini? Produk tidak akan muncul lagi di list/order panel.')) return;
+        try {
+          await Api.delete(`/api/dashboard/guilds/${state.guildId}/products/${id}`);
+          toast('Produk berhasil dihapus');
+          renderProducts();
+        } catch (err) {
+          toast('Gagal: ' + err.message, true);
+        }
+      });
+    });
   };
   renderList(products);
 
