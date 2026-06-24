@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const { EmbedBuilder } = require('discord.js');
 const settingsRepo = require('../repositories/settingsRepo');
 const productRepo = require('../repositories/productRepo');
 const orderRepo = require('../repositories/orderRepo');
@@ -64,6 +65,48 @@ router.get('/guilds/:guildId/meta', (req, res) => {
     .sort((a, b) => a.name.localeCompare(b.name));
 
   res.json({ guildName: guild.name, guildIcon: guild.iconURL(), channels, roles });
+});
+
+// --- BROADCAST (send message/embed/file/link to any channel) ---
+
+router.post('/guilds/:guildId/broadcast', async (req, res) => {
+  const guild = discordClient?.guilds.cache.get(req.params.guildId);
+  if (!guild) {
+    return res.status(404).json({ error: 'Bot belum bergabung ke server ini.' });
+  }
+
+  const { channel_id, content, embed_title, embed_description, embed_color, embed_image_url, attachment_url } =
+    req.body;
+
+  const channel = guild.channels.cache.get(channel_id);
+  if (!channel || !channel.isTextBased()) {
+    return res.status(400).json({ error: 'Channel tidak valid.' });
+  }
+
+  const hasEmbed = embed_title || embed_description || embed_image_url;
+  if (!content && !hasEmbed && !attachment_url) {
+    return res.status(400).json({ error: 'Isi minimal salah satu: pesan teks, embed, atau file/link.' });
+  }
+
+  const payload = {};
+  if (content) payload.content = content;
+
+  if (hasEmbed) {
+    const embed = new EmbedBuilder().setColor(embed_color ? parseInt(embed_color.replace('#', ''), 16) : 0x5865f2);
+    if (embed_title) embed.setTitle(embed_title);
+    if (embed_description) embed.setDescription(embed_description);
+    if (embed_image_url) embed.setImage(embed_image_url);
+    payload.embeds = [embed];
+  }
+
+  if (attachment_url) payload.files = [attachment_url];
+
+  try {
+    const sent = await channel.send(payload);
+    res.json({ success: true, messageId: sent.id, channelId: channel.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengirim pesan: ' + err.message });
+  }
 });
 
 // --- SETTINGS API ---

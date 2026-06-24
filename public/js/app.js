@@ -104,6 +104,7 @@ function renderView() {
     orders: renderOrders,
     payments: renderPayments,
     youtube: renderYoutube,
+    broadcast: renderBroadcast,
     settings: renderSettings,
     logs: renderLogs,
     backups: renderBackups,
@@ -371,6 +372,75 @@ async function renderYoutube() {
       });
       toast('Channel ditambahkan');
       renderYoutube();
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+}
+
+// ---------- Broadcast ----------
+
+async function renderBroadcast() {
+  const channels = state.meta?.channels || [];
+
+  content.innerHTML = `
+    <h1 class="page-title">Broadcast</h1>
+    <div class="page-subtitle">// Kirim pesan, embed, link, atau file ke channel manapun lewat bot</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Kirim Pesan</div>
+      <form id="broadcast-form">
+        <label>Channel Tujuan</label>
+        <select name="channel_id" required>
+          <option value="">-- Pilih Channel --</option>
+          ${channels.map((c) => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('')}
+        </select>
+
+        <label>Pesan Teks (opsional, tampil di luar embed)</label>
+        <textarea name="content" rows="2" placeholder="Contoh: @everyone ada promo baru!"></textarea>
+
+        <label>Judul Embed (opsional)</label>
+        <input name="embed_title" placeholder="Contoh: 🔥 Promo Spesial">
+
+        <label>Deskripsi Embed (opsional, link juga bisa ditaruh di sini)</label>
+        <textarea name="embed_description" rows="4" placeholder="Tulis isi pesan/embed di sini. Link akan otomatis jadi clickable."></textarea>
+
+        <label>Warna Embed (opsional)</label>
+        <input name="embed_color" type="color" value="#5865f2">
+
+        <label>URL Gambar Embed (opsional)</label>
+        <input name="embed_image_url" placeholder="https://...">
+
+        <label>URL File/Lampiran (opsional, bisa gambar/zip/pdf dll lewat link)</label>
+        <input name="attachment_url" placeholder="https://...">
+
+        <div style="margin-top:1.2rem;"><button class="btn" type="submit">📨 Kirim Sekarang</button></div>
+      </form>
+    </div>
+  `;
+
+  document.getElementById('broadcast-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const channelId = fd.get('channel_id');
+    if (!channelId) {
+      toast('Pilih channel tujuan terlebih dahulu', true);
+      return;
+    }
+
+    try {
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/broadcast`, {
+        channel_id: channelId,
+        content: fd.get('content'),
+        embed_title: fd.get('embed_title'),
+        embed_description: fd.get('embed_description'),
+        embed_color: fd.get('embed_color'),
+        embed_image_url: fd.get('embed_image_url'),
+        attachment_url: fd.get('attachment_url'),
+      });
+      toast('Pesan berhasil dikirim');
+      e.target.reset();
     } catch (err) {
       toast('Gagal: ' + err.message, true);
     }
