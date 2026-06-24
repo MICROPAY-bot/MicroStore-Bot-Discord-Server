@@ -1,4 +1,4 @@
-const { ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
+const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const TicketService = require('../../services/TicketService');
 const ProductService = require('../../services/ProductService');
 
@@ -11,8 +11,15 @@ module.exports = async function createOrderTicket(interaction, quantity = 1) {
   const channel = await TicketService.createOrderTicket(interaction.guild, interaction.user);
   const products = ProductService.listProducts(interaction.guild.id);
 
+  const closeRow = new ActionRowBuilder().addComponents(
+    new ButtonBuilder().setCustomId('order_close').setLabel('Close Ticket').setStyle(ButtonStyle.Secondary)
+  );
+
   if (!products.length) {
-    await channel.send('⚠️ Belum ada produk yang tersedia. Hubungi admin untuk menambahkan produk.');
+    await channel.send({
+      content: '⚠️ Belum ada produk yang tersedia. Hubungi admin untuk menambahkan produk.',
+      components: [closeRow],
+    });
     return channel;
   }
 
@@ -27,11 +34,11 @@ module.exports = async function createOrderTicket(interaction, quantity = 1) {
       }))
     );
 
-  const row = new ActionRowBuilder().addComponents(menu);
+  const menuRow = new ActionRowBuilder().addComponents(menu);
 
   await channel.send({
     content: `👋 <@${interaction.user.id}> Selamat datang di order ticket.\n\n📊 **Jumlah Order: ${quantity}**\n\nSilakan pilih produk:`,
-    components: [row],
+    components: [menuRow, closeRow],
   });
 
   return channel;
