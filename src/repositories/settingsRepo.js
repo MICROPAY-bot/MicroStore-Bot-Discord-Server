@@ -27,6 +27,13 @@ module.exports = {
     db.prepare(`UPDATE settings SET welcome_role = ? WHERE guild_id = ?`).run(roleId, guildId);
   },
 
+  setWelcomeEmbed(guildId, { enabled, title, color, bannerUrl, thumbnailUrl }) {
+    this.ensure(guildId);
+    db.prepare(
+      `UPDATE settings SET welcome_embed_enabled = ?, welcome_embed_title = ?, welcome_embed_color = ?, welcome_banner_url = ?, welcome_thumbnail_url = ? WHERE guild_id = ?`
+    ).run(enabled ? 1 : 0, title || null, color || null, bannerUrl || null, thumbnailUrl || null, guildId);
+  },
+
   setVerify(guildId, channelId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET verify_enabled = 1, verify_channel = ?, verify_role = ? WHERE guild_id = ?`)

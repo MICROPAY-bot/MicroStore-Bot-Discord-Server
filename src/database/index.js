@@ -57,6 +57,11 @@ function ensureColumn(table, column, definition) {
 
 ensureColumn('settings', 'welcome_message', 'TEXT');
 ensureColumn('settings', 'welcome_role', 'TEXT');
+ensureColumn('settings', 'welcome_embed_enabled', 'INTEGER DEFAULT 0');
+ensureColumn('settings', 'welcome_embed_title', 'TEXT');
+ensureColumn('settings', 'welcome_embed_color', 'TEXT');
+ensureColumn('settings', 'welcome_banner_url', 'TEXT');
+ensureColumn('settings', 'welcome_thumbnail_url', 'TEXT');
 ensureColumn('orders', 'quantity', 'INTEGER DEFAULT 1');
 ensureColumn('joki_quest_orders', 'discord_email', 'TEXT');
 ensureColumn('joki_quest_orders', 'password_discord', 'TEXT');

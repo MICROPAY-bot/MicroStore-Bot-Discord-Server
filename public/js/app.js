@@ -105,6 +105,7 @@ function renderView() {
     payments: renderPayments,
     youtube: renderYoutube,
     broadcast: renderBroadcast,
+    'quest-update': renderQuestUpdate,
     settings: renderSettings,
     logs: renderLogs,
     backups: renderBackups,
@@ -447,6 +448,71 @@ async function renderBroadcast() {
   });
 }
 
+// ---------- Quest Update ----------
+
+async function renderQuestUpdate() {
+  const channels = state.meta?.channels || [];
+
+  content.innerHTML = `
+    <h1 class="page-title">Quest Update</h1>
+    <div class="page-subtitle">// Kirim pengumuman quest baru ke channel pilihan kamu</div>
+
+    <div class="hud-panel">
+      <span class="corner-bl"></span><span class="corner-br"></span>
+      <div class="panel-title">Detail Quest</div>
+      <form id="quest-form">
+        <label>Channel Tujuan</label>
+        <select name="channel_id" required>
+          <option value="">-- Pilih Channel --</option>
+          ${channels.map((c) => `<option value="${c.id}">#${escapeHtml(c.name)}</option>`).join('')}
+        </select>
+
+        <label>🎮 Game</label>
+        <input name="game" placeholder="Contoh: Valorant" required>
+
+        <label>🎁 Reward</label>
+        <input name="reward" placeholder="Contoh: Avatar Decoration" required>
+
+        <label>⏰ Expires</label>
+        <input name="expires" placeholder="Contoh: 14 Days">
+
+        <label>📎 Link Quest (opsional)</label>
+        <input name="link" placeholder="https://discord.com/quests">
+
+        <label>URL Gambar/Thumbnail (opsional)</label>
+        <input name="image_url" placeholder="https://...">
+
+        <div style="margin-top:1.2rem;"><button class="btn" type="submit">🔔 Kirim Quest Update</button></div>
+      </form>
+    </div>
+  `;
+
+  document.getElementById('quest-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const channelId = fd.get('channel_id');
+    if (!channelId) {
+      toast('Pilih channel tujuan terlebih dahulu', true);
+      return;
+    }
+
+    try {
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/quest-update`, {
+        channel_id: channelId,
+        game: fd.get('game'),
+        reward: fd.get('reward'),
+        expires: fd.get('expires'),
+        link: fd.get('link'),
+        image_url: fd.get('image_url'),
+      });
+      toast('Quest update berhasil dikirim');
+      e.target.reset();
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+}
+
 // ---------- Settings ----------
 
 async function renderSettings() {
@@ -476,6 +542,19 @@ async function renderSettings() {
           <select name="welcome_role">${roleOptions(settings.welcome_role)}</select>
           <label>Pesan Welcome</label>
           <textarea name="welcome_message" rows="2">${escapeHtml(settings.welcome_message || '')}</textarea>
+
+          <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.8rem;">
+            <input type="checkbox" name="welcome_embed_enabled" ${settings.welcome_embed_enabled ? 'checked' : ''} style="width:auto;">
+            Tampilkan sebagai Embed + Banner
+          </label>
+          <label>Judul Embed</label>
+          <input name="welcome_embed_title" value="${escapeHtml(settings.welcome_embed_title || '')}" placeholder="👋 Selamat Datang!">
+          <label>Warna Embed</label>
+          <input name="welcome_embed_color" type="color" value="${settings.welcome_embed_color || '#5865f2'}">
+          <label>URL Banner (gambar besar di bawah embed)</label>
+          <input name="welcome_banner_url" value="${escapeHtml(settings.welcome_banner_url || '')}" placeholder="https://...">
+          <label>URL Thumbnail (kecil di kanan atas, default: avatar member)</label>
+          <input name="welcome_thumbnail_url" value="${escapeHtml(settings.welcome_thumbnail_url || '')}" placeholder="https://...">
         </div>
 
         <div class="hud-panel">
@@ -514,6 +593,7 @@ async function renderSettings() {
     e.preventDefault();
     const fd = new FormData(e.target);
     const body = Object.fromEntries(fd.entries());
+    body.welcome_embed_enabled = e.target.querySelector('[name="welcome_embed_enabled"]').checked ? 1 : 0;
     try {
       await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
       toast('Settings disimpan');

@@ -109,6 +109,45 @@ router.post('/guilds/:guildId/broadcast', async (req, res) => {
   }
 });
 
+// --- QUEST UPDATE (manual announcement of a new quest, posted as a formatted embed) ---
+
+router.post('/guilds/:guildId/quest-update', async (req, res) => {
+  const guild = discordClient?.guilds.cache.get(req.params.guildId);
+  if (!guild) {
+    return res.status(404).json({ error: 'Bot belum bergabung ke server ini.' });
+  }
+
+  const { channel_id, game, reward, expires, link, image_url } = req.body;
+
+  if (!channel_id || !game || !reward) {
+    return res.status(400).json({ error: 'Channel, Game, dan Reward wajib diisi.' });
+  }
+
+  const channel = guild.channels.cache.get(channel_id);
+  if (!channel || !channel.isTextBased()) {
+    return res.status(400).json({ error: 'Channel tidak valid.' });
+  }
+
+  const embed = new EmbedBuilder()
+    .setTitle('🔔 NEW DISCORD QUEST')
+    .setColor(0x5865f2)
+    .addFields(
+      { name: '🎮 Game', value: game, inline: false },
+      { name: '🎁 Reward', value: reward, inline: false },
+      { name: '⏰ Expires', value: expires || 'Tidak ditentukan', inline: false }
+    );
+
+  if (link) embed.addFields({ name: '📎 Open Quest', value: link, inline: false });
+  if (image_url) embed.setImage(image_url);
+
+  try {
+    const sent = await channel.send({ embeds: [embed] });
+    res.json({ success: true, messageId: sent.id, channelId: channel.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengirim quest update: ' + err.message });
+  }
+});
+
 // --- SETTINGS API ---
 
 router.get('/guilds/:guildId/settings', (req, res) => {
@@ -118,8 +157,22 @@ router.get('/guilds/:guildId/settings', (req, res) => {
 
 router.put('/guilds/:guildId/settings', (req, res) => {
   const { guildId } = req.params;
-  const { welcome_message, welcome_role, welcome_channel, verify_channel, verify_role, buyer_role, admin_role, log_channel, qris_image_url } =
-    req.body;
+  const {
+    welcome_message,
+    welcome_role,
+    welcome_channel,
+    welcome_embed_enabled,
+    welcome_embed_title,
+    welcome_embed_color,
+    welcome_banner_url,
+    welcome_thumbnail_url,
+    verify_channel,
+    verify_role,
+    buyer_role,
+    admin_role,
+    log_channel,
+    qris_image_url,
+  } = req.body;
 
   settingsRepo.ensure(guildId);
   if (welcome_message !== undefined) settingsRepo.setWelcomeMessage(guildId, welcome_message);
@@ -132,6 +185,22 @@ router.put('/guilds/:guildId/settings', (req, res) => {
       welcome_message !== undefined ? welcome_message : current.welcome_message,
       welcome_role !== undefined ? welcome_role : current.welcome_role
     );
+  }
+  if (
+    welcome_embed_enabled !== undefined ||
+    welcome_embed_title !== undefined ||
+    welcome_embed_color !== undefined ||
+    welcome_banner_url !== undefined ||
+    welcome_thumbnail_url !== undefined
+  ) {
+    const current = settingsRepo.get(guildId);
+    settingsRepo.setWelcomeEmbed(guildId, {
+      enabled: welcome_embed_enabled !== undefined ? !!welcome_embed_enabled : !!current.welcome_embed_enabled,
+      title: welcome_embed_title !== undefined ? welcome_embed_title : current.welcome_embed_title,
+      color: welcome_embed_color !== undefined ? welcome_embed_color : current.welcome_embed_color,
+      bannerUrl: welcome_banner_url !== undefined ? welcome_banner_url : current.welcome_banner_url,
+      thumbnailUrl: welcome_thumbnail_url !== undefined ? welcome_thumbnail_url : current.welcome_thumbnail_url,
+    });
   }
   if (verify_channel !== undefined && verify_role !== undefined) settingsRepo.setVerify(guildId, verify_channel, verify_role);
   if (buyer_role !== undefined) settingsRepo.setBuyerRole(guildId, buyer_role);
