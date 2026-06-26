@@ -40,6 +40,18 @@ module.exports = {
       .run(channelId, roleId, guildId);
   },
 
+  setVerifyEmbed(guildId, { title, description, color, imageUrl }) {
+    this.ensure(guildId);
+    db.prepare(
+      `UPDATE settings SET verify_embed_title = ?, verify_embed_description = ?, verify_embed_color = ?, verify_image_url = ? WHERE guild_id = ?`
+    ).run(title || null, description || null, color || null, imageUrl || null, guildId);
+  },
+
+  setVerifyMessageId(guildId, messageId) {
+    this.ensure(guildId);
+    db.prepare(`UPDATE settings SET verify_message_id = ? WHERE guild_id = ?`).run(messageId, guildId);
+  },
+
   setBuyerRole(guildId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET buyer_role = ? WHERE guild_id = ?`).run(roleId, guildId);

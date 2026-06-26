@@ -2,6 +2,7 @@ const express = require('express');
 const fs = require('fs');
 const { EmbedBuilder } = require('discord.js');
 const settingsRepo = require('../repositories/settingsRepo');
+const { postVerifyPanel } = require('../bot/utils/verifyPanel');
 const productRepo = require('../repositories/productRepo');
 const orderRepo = require('../repositories/orderRepo');
 const paymentRepo = require('../repositories/paymentRepo');
@@ -168,6 +169,10 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     welcome_thumbnail_url,
     verify_channel,
     verify_role,
+    verify_embed_title,
+    verify_embed_description,
+    verify_embed_color,
+    verify_image_url,
     buyer_role,
     admin_role,
     log_channel,
@@ -203,12 +208,59 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     });
   }
   if (verify_channel !== undefined && verify_role !== undefined) settingsRepo.setVerify(guildId, verify_channel, verify_role);
+  if (
+    verify_embed_title !== undefined ||
+    verify_embed_description !== undefined ||
+    verify_embed_color !== undefined ||
+    verify_image_url !== undefined
+  ) {
+    const current = settingsRepo.get(guildId);
+    settingsRepo.setVerifyEmbed(guildId, {
+      title: verify_embed_title !== undefined ? verify_embed_title : current.verify_embed_title,
+      description: verify_embed_description !== undefined ? verify_embed_description : current.verify_embed_description,
+      color: verify_embed_color !== undefined ? verify_embed_color : current.verify_embed_color,
+      imageUrl: verify_image_url !== undefined ? verify_image_url : current.verify_image_url,
+    });
+  }
   if (buyer_role !== undefined) settingsRepo.setBuyerRole(guildId, buyer_role);
   if (admin_role !== undefined) settingsRepo.setAdminRole(guildId, admin_role);
   if (log_channel !== undefined) settingsRepo.setLogChannel(guildId, log_channel);
   if (qris_image_url !== undefined) settingsRepo.setQrisImage(guildId, qris_image_url);
 
   res.json(settingsRepo.get(guildId));
+});
+
+// Re-post the verification panel using the currently saved embed settings.
+// Useful after editing the title/description/color/image from the dashboard.
+router.post('/guilds/:guildId/verify-panel/repost', async (req, res) => {
+  const guild = discordClient?.guilds.cache.get(req.params.guildId);
+  if (!guild) {
+    return res.status(404).json({ error: 'Bot belum bergabung ke server ini.' });
+  }
+
+  const settings = settingsRepo.get(req.params.guildId);
+  if (!settings || !settings.verify_channel || !settings.verify_role) {
+    return res.status(400).json({ error: 'Setup verifikasi (channel & role) belum dikonfigurasi. Jalankan /setup-verify dulu.' });
+  }
+
+  try {
+    // Try to delete the old panel message first to avoid duplicates piling up in the channel.
+    if (settings.verify_message_id) {
+      const channel = guild.channels.cache.get(settings.verify_channel);
+      const oldMessage = channel ? await channel.messages.fetch(settings.verify_message_id).catch(() => null) : null;
+      if (oldMessage) await oldMessage.delete().catch(() => {});
+    }
+
+    const sent = await postVerifyPanel(guild, settings);
+    if (!sent) {
+      return res.status(400).json({ error: 'Channel verifikasi tidak ditemukan.' });
+    }
+
+    settingsRepo.setVerifyMessageId(req.params.guildId, sent.id);
+    res.json({ success: true, messageId: sent.id });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengirim ulang panel: ' + err.message });
+  }
 });
 
 // --- PRODUCTS API ---

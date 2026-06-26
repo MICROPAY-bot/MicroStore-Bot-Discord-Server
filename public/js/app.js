@@ -564,6 +564,19 @@ async function renderSettings() {
           <select name="verify_channel">${channelOptions(settings.verify_channel)}</select>
           <label>Role Setelah Verifikasi</label>
           <select name="verify_role">${roleOptions(settings.verify_role)}</select>
+
+          <label>Judul Embed</label>
+          <input name="verify_embed_title" value="${escapeHtml(settings.verify_embed_title || '')}" placeholder="✅ Verifikasi Akun">
+          <label>Deskripsi Embed</label>
+          <textarea name="verify_embed_description" rows="2" placeholder="Klik tombol di bawah untuk verifikasi akun kamu...">${escapeHtml(settings.verify_embed_description || '')}</textarea>
+          <label>Warna Embed</label>
+          <input name="verify_embed_color" type="color" value="${settings.verify_embed_color || '#57f287'}">
+          <label>URL Gambar Embed</label>
+          <input name="verify_image_url" value="${escapeHtml(settings.verify_image_url || '')}" placeholder="https://...">
+
+          <div style="margin-top:0.8rem;">
+            <button type="button" id="repost-verify-btn" class="btn btn-ghost btn-sm">🔁 Simpan &amp; Kirim Ulang Panel ke Channel</button>
+          </div>
         </div>
 
         <div class="hud-panel">
@@ -597,6 +610,21 @@ async function renderSettings() {
     try {
       await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
       toast('Settings disimpan');
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+
+  document.getElementById('repost-verify-btn').addEventListener('click', async () => {
+    const form = document.getElementById('settings-form');
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+    body.welcome_embed_enabled = form.querySelector('[name="welcome_embed_enabled"]').checked ? 1 : 0;
+
+    try {
+      await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/verify-panel/repost`, {});
+      toast('Panel verifikasi berhasil dikirim ulang ke channel');
     } catch (err) {
       toast('Gagal: ' + err.message, true);
     }

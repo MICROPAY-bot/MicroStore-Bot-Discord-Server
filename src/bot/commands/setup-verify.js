@@ -1,5 +1,6 @@
-const { SlashCommandBuilder, PermissionFlagsBits, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
 const settingsRepo = require('../../repositories/settingsRepo');
+const { postVerifyPanel } = require('../utils/verifyPanel');
 
 module.exports = {
   data: new SlashCommandBuilder()
@@ -7,18 +8,26 @@ module.exports = {
     .setDescription('Setup verification channel + role')
     .setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild)
     .addChannelOption((o) => o.setName('channel').setDescription('Channel').setRequired(true))
-    .addRoleOption((o) => o.setName('role').setDescription('Role').setRequired(true)),
+    .addRoleOption((o) => o.setName('role').setDescription('Role').setRequired(true))
+    .addStringOption((o) => o.setName('judul').setDescription('Judul embed (opsional)').setRequired(false))
+    .addStringOption((o) => o.setName('deskripsi').setDescription('Deskripsi embed (opsional)').setRequired(false))
+    .addStringOption((o) => o.setName('gambar_url').setDescription('URL gambar embed (opsional)').setRequired(false)),
 
   async execute(interaction) {
     const channel = interaction.options.getChannel('channel');
     const role = interaction.options.getRole('role');
     settingsRepo.setVerify(interaction.guild.id, channel.id, role.id);
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId('verify_button').setLabel('✅ Verify Me').setStyle(ButtonStyle.Success)
-    );
+    settingsRepo.setVerifyEmbed(interaction.guild.id, {
+      title: interaction.options.getString('judul'),
+      description: interaction.options.getString('deskripsi'),
+      imageUrl: interaction.options.getString('gambar_url'),
+    });
 
-    await channel.send({ content: 'Klik tombol di bawah untuk verifikasi akun kamu.', components: [row] });
-    await interaction.reply({ content: 'Verification configured', ephemeral: true });
+    const settings = settingsRepo.get(interaction.guild.id);
+    const sent = await postVerifyPanel(interaction.guild, settings);
+    if (sent) settingsRepo.setVerifyMessageId(interaction.guild.id, sent.id);
+
+    await interaction.reply({ content: '✅ Verification panel berhasil dipasang.', ephemeral: true });
   },
 };
