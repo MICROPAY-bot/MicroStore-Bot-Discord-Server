@@ -56,10 +56,21 @@ module.exports = {
       const youtubeChannelId = monitoredChannel.youtube_channel_id;
       const rssUrl = `https://www.youtube.com/feeds/videos.xml?channel_id=${youtubeChannelId}`;
 
-      // Fetch RSS feed
-      const response = await fetch(rssUrl);
+      // Fetch RSS feed. YouTube sometimes silently blocks (403) requests from
+      // cloud/datacenter IPs (like Railway) that don't send a normal browser User-Agent.
+      const response = await fetch(rssUrl, {
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        },
+      });
       if (!response.ok) {
         console.error(`YouTube RSS fetch failed: ${response.status}`);
+        await LogService.log(
+          guild,
+          'youtube-error',
+          `⚠️ Gagal cek update channel **${monitoredChannel.youtube_channel_name}** (HTTP ${response.status}). Channel ID mungkin salah atau YouTube menolak request.`
+        );
         return { success: false, error: `HTTP ${response.status}` };
       }
 
@@ -107,6 +118,11 @@ module.exports = {
       return { success: true, newVideos: newVideos.length };
     } catch (err) {
       console.error('YouTubeService.checkAndNotify error:', err);
+      await LogService.log(
+        guild,
+        'youtube-error',
+        `⚠️ Error saat cek channel **${monitoredChannel.youtube_channel_name}**: ${err.message}`
+      ).catch(() => {});
       return { success: false, error: err.message };
     }
   },
@@ -116,14 +132,20 @@ module.exports = {
    * Polls every X minutes.
    */
   startPolling(client, pollIntervalMinutes = 10) {
-    setInterval(async () => {
+    const runCheck = async () => {
       for (const guild of client.guilds.cache.values()) {
         const channels = youtubeChannelRepo.listByGuild(guild.id);
         for (const ch of channels) {
           await this.checkAndNotify(guild, ch);
         }
       }
-    }, pollIntervalMinutes * 60 * 1000);
+    };
+
+    // Run once immediately on startup (don't wait for the first interval to elapse),
+    // delayed slightly so the client has time to finish caching guilds/channels.
+    setTimeout(runCheck, 10 * 1000);
+
+    setInterval(runCheck, pollIntervalMinutes * 60 * 1000);
 
     console.log(`✅ YouTube Monitor polling started (interval: ${pollIntervalMinutes} min)`);
   },
