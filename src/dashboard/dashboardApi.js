@@ -177,6 +177,8 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     admin_role,
     log_channel,
     qris_image_url,
+    bump_reminder_enabled,
+    bump_reminder_channel,
   } = req.body;
 
   settingsRepo.ensure(guildId);
@@ -226,6 +228,13 @@ router.put('/guilds/:guildId/settings', (req, res) => {
   if (admin_role !== undefined) settingsRepo.setAdminRole(guildId, admin_role);
   if (log_channel !== undefined) settingsRepo.setLogChannel(guildId, log_channel);
   if (qris_image_url !== undefined) settingsRepo.setQrisImage(guildId, qris_image_url);
+  if (bump_reminder_enabled !== undefined || bump_reminder_channel !== undefined) {
+    const current = settingsRepo.get(guildId);
+    settingsRepo.setBumpReminder(guildId, {
+      enabled: bump_reminder_enabled !== undefined ? !!bump_reminder_enabled : !!current.bump_reminder_enabled,
+      channelId: bump_reminder_channel !== undefined ? bump_reminder_channel : current.bump_reminder_channel,
+    });
+  }
 
   res.json(settingsRepo.get(guildId));
 });

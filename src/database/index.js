@@ -67,6 +67,8 @@ ensureColumn('settings', 'verify_embed_description', 'TEXT');
 ensureColumn('settings', 'verify_embed_color', 'TEXT');
 ensureColumn('settings', 'verify_image_url', 'TEXT');
 ensureColumn('settings', 'verify_message_id', 'TEXT');
+ensureColumn('settings', 'bump_reminder_channel', 'TEXT');
+ensureColumn('settings', 'bump_reminder_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('orders', 'quantity', 'INTEGER DEFAULT 1');
 ensureColumn('joki_quest_orders', 'discord_email', 'TEXT');
 ensureColumn('joki_quest_orders', 'password_discord', 'TEXT');

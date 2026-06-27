@@ -52,6 +52,15 @@ module.exports = {
     db.prepare(`UPDATE settings SET verify_message_id = ? WHERE guild_id = ?`).run(messageId, guildId);
   },
 
+  setBumpReminder(guildId, { enabled, channelId }) {
+    this.ensure(guildId);
+    db.prepare(`UPDATE settings SET bump_reminder_enabled = ?, bump_reminder_channel = ? WHERE guild_id = ?`).run(
+      enabled ? 1 : 0,
+      channelId || null,
+      guildId
+    );
+  },
+
   setBuyerRole(guildId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET buyer_role = ? WHERE guild_id = ?`).run(roleId, guildId);

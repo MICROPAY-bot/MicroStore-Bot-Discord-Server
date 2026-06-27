@@ -596,6 +596,17 @@ async function renderSettings() {
           <label>QRIS Image URL</label>
           <input name="qris_image_url" value="${escapeHtml(settings.qris_image_url || '')}" placeholder="https://...">
         </div>
+
+        <div class="hud-panel">
+          <span class="corner-bl"></span><span class="corner-br"></span>
+          <div class="panel-title">Bump Reminder</div>
+          <label style="display:flex; align-items:center; gap:0.5rem;">
+            <input type="checkbox" name="bump_reminder_enabled" ${settings.bump_reminder_enabled ? 'checked' : ''} style="width:auto;">
+            Aktifkan reminder otomatis "/bump" setiap 2 jam
+          </label>
+          <label>Channel Reminder</label>
+          <select name="bump_reminder_channel">${channelOptions(settings.bump_reminder_channel)}</select>
+        </div>
       </div>
 
       <div style="margin-top:1.2rem;"><button class="btn" type="submit">💾 Simpan Settings</button></div>
@@ -607,6 +618,7 @@ async function renderSettings() {
     const fd = new FormData(e.target);
     const body = Object.fromEntries(fd.entries());
     body.welcome_embed_enabled = e.target.querySelector('[name="welcome_embed_enabled"]').checked ? 1 : 0;
+    body.bump_reminder_enabled = e.target.querySelector('[name="bump_reminder_enabled"]').checked ? 1 : 0;
     try {
       await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
       toast('Settings disimpan');
@@ -620,6 +632,7 @@ async function renderSettings() {
     const fd = new FormData(form);
     const body = Object.fromEntries(fd.entries());
     body.welcome_embed_enabled = form.querySelector('[name="welcome_embed_enabled"]').checked ? 1 : 0;
+    body.bump_reminder_enabled = form.querySelector('[name="bump_reminder_enabled"]').checked ? 1 : 0;
 
     try {
       await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);

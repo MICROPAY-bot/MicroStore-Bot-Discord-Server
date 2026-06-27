@@ -1,5 +1,6 @@
 const YouTubeService = require('../../services/YouTubeService');
 const BackupService = require('../../services/BackupService');
+const BumpReminderService = require('../../services/BumpReminderService');
 
 module.exports = {
   name: 'ready',
@@ -12,5 +13,8 @@ module.exports = {
 
     // Start automatic database backup (every 24 hours, keep last 14)
     BackupService.startScheduledBackup(client, 24, 14);
+
+    // Start /bump reminder scheduler (every 2 hours, if enabled per-guild)
+    BumpReminderService.startReminder(client);
   },
 };
