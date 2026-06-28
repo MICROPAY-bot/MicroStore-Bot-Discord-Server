@@ -564,6 +564,8 @@ async function renderSettings() {
           <select name="verify_channel">${channelOptions(settings.verify_channel)}</select>
           <label>Role Setelah Verifikasi</label>
           <select name="verify_role">${roleOptions(settings.verify_role)}</select>
+          <label>Role "Unverified" (akan dihapus otomatis setelah verifikasi)</label>
+          <select name="unverified_role">${roleOptions(settings.unverified_role)}</select>
 
           <label>Judul Embed</label>
           <input name="verify_embed_title" value="${escapeHtml(settings.verify_embed_title || '')}" placeholder="✅ Verifikasi Akun">

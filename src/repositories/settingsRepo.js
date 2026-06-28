@@ -61,6 +61,11 @@ module.exports = {
     );
   },
 
+  setUnverifiedRole(guildId, roleId) {
+    this.ensure(guildId);
+    db.prepare(`UPDATE settings SET unverified_role = ? WHERE guild_id = ?`).run(roleId || null, guildId);
+  },
+
   setBuyerRole(guildId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET buyer_role = ? WHERE guild_id = ?`).run(roleId, guildId);

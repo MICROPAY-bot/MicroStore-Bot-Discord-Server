@@ -179,6 +179,7 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     qris_image_url,
     bump_reminder_enabled,
     bump_reminder_channel,
+    unverified_role,
   } = req.body;
 
   settingsRepo.ensure(guildId);
@@ -235,6 +236,7 @@ router.put('/guilds/:guildId/settings', (req, res) => {
       channelId: bump_reminder_channel !== undefined ? bump_reminder_channel : current.bump_reminder_channel,
     });
   }
+  if (unverified_role !== undefined) settingsRepo.setUnverifiedRole(guildId, unverified_role);
 
   res.json(settingsRepo.get(guildId));
 });

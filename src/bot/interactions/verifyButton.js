@@ -30,6 +30,22 @@ module.exports = {
     }
 
     await interaction.reply({ content: '✅ Kamu berhasil diverifikasi!', ephemeral: true });
+
+    // If an "unverified" role is configured, remove it now that the member is verified.
+    if (settings.unverified_role) {
+      const unverifiedRole = interaction.guild.roles.cache.get(settings.unverified_role);
+      if (unverifiedRole && interaction.member.roles.cache.has(unverifiedRole.id)) {
+        await interaction.member.roles.remove(unverifiedRole).catch((err) => {
+          console.error('Failed to remove unverified role:', err);
+          LogService.log(
+            interaction.guild,
+            'verification-error',
+            `⚠️ Gagal menghapus role unverified dari <@${interaction.user.id}>: ${err.message}`
+          ).catch(() => {});
+        });
+      }
+    }
+
     await LogService.log(interaction.guild, 'verification', `<@${interaction.user.id}> berhasil verifikasi`);
   },
 };
