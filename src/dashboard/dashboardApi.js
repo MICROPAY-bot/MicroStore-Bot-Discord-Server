@@ -180,6 +180,8 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     bump_reminder_enabled,
     bump_reminder_channel,
     unverified_role,
+    rating_channel,
+    testimonial_banner_url,
   } = req.body;
 
   settingsRepo.ensure(guildId);
@@ -237,6 +239,8 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     });
   }
   if (unverified_role !== undefined) settingsRepo.setUnverifiedRole(guildId, unverified_role);
+  if (rating_channel !== undefined) settingsRepo.setRatingChannel(guildId, rating_channel);
+  if (testimonial_banner_url !== undefined) settingsRepo.setTestimonialBanner(guildId, testimonial_banner_url);
 
   res.json(settingsRepo.get(guildId));
 });

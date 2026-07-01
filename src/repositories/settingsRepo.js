@@ -66,6 +66,16 @@ module.exports = {
     db.prepare(`UPDATE settings SET unverified_role = ? WHERE guild_id = ?`).run(roleId || null, guildId);
   },
 
+  setRatingChannel(guildId, channelId) {
+    this.ensure(guildId);
+    db.prepare(`UPDATE settings SET rating_channel = ? WHERE guild_id = ?`).run(channelId || null, guildId);
+  },
+
+  setTestimonialBanner(guildId, url) {
+    this.ensure(guildId);
+    db.prepare(`UPDATE settings SET testimonial_banner_url = ? WHERE guild_id = ?`).run(url || null, guildId);
+  },
+
   setBuyerRole(guildId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET buyer_role = ? WHERE guild_id = ?`).run(roleId, guildId);

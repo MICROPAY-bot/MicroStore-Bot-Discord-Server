@@ -70,7 +70,20 @@ ensureColumn('settings', 'verify_message_id', 'TEXT');
 ensureColumn('settings', 'bump_reminder_channel', 'TEXT');
 ensureColumn('settings', 'bump_reminder_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('settings', 'unverified_role', 'TEXT');
+ensureColumn('settings', 'rating_channel', 'TEXT');
+ensureColumn('settings', 'testimonial_banner_url', 'TEXT');
 ensureColumn('orders', 'quantity', 'INTEGER DEFAULT 1');
+
+// Ratings table
+db.prepare(`CREATE TABLE IF NOT EXISTS ratings (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  guild_id TEXT,
+  order_id INTEGER,
+  user_id TEXT,
+  stars INTEGER,
+  comment TEXT,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)`).run();
 ensureColumn('joki_quest_orders', 'discord_email', 'TEXT');
 ensureColumn('joki_quest_orders', 'password_discord', 'TEXT');
 ensureColumn('joki_quest_orders', 'backup_code', 'TEXT');

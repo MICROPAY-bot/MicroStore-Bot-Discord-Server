@@ -595,6 +595,10 @@ async function renderSettings() {
           <div class="panel-title">Payment &amp; Logs</div>
           <label>Log Channel</label>
           <select name="log_channel">${channelOptions(settings.log_channel)}</select>
+          <label>Rating Channel (log rating buyer masuk ke sini)</label>
+          <select name="rating_channel">${channelOptions(settings.rating_channel)}</select>
+          <label>URL Banner Testimoni (muncul di embed rating buyer)</label>
+          <input name="testimonial_banner_url" value="${escapeHtml(settings.testimonial_banner_url || '')}" placeholder="https://...">
           <label>QRIS Image URL</label>
           <input name="qris_image_url" value="${escapeHtml(settings.qris_image_url || '')}" placeholder="https://...">
         </div>

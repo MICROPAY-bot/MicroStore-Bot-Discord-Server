@@ -26,6 +26,6 @@ module.exports = {
     }
 
     await interaction.reply({ content: '⏳ Memproses order...', ephemeral: true });
-    await PaymentService.startOrder(interaction.channel, interaction.user, productId, quantity);
+    await PaymentService.startOrderManual(interaction.channel, interaction.user, productId, quantity);
   },
 };
