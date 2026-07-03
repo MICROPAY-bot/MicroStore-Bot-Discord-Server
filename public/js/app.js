@@ -212,7 +212,6 @@ async function renderProducts() {
       <div class="panel-title">Daftar Produk (${products.length})</div>
       <div id="product-list"></div>
     </div>
-<<<<<<< HEAD
 
     <div class="hud-panel">
       <span class="corner-bl"></span><span class="corner-br"></span>
@@ -233,8 +232,6 @@ async function renderProducts() {
         <div style="margin-top:1.2rem;"><button class="btn" type="submit">📨 Kirim Katalog ke Channel</button></div>
       </form>
     </div>
-=======
->>>>>>> e168ec7a30b1ba7bb9b9d89fd933be1baba89a38
   `;
 
   const renderList = (list) => {
@@ -260,7 +257,6 @@ async function renderProducts() {
   };
   renderList(products);
 
-<<<<<<< HEAD
   // Populate catalog channel dropdown from meta
   const catalogChannelSelect = document.getElementById('catalog-channel');
   if (catalogChannelSelect && state.meta?.channels) {
@@ -272,8 +268,6 @@ async function renderProducts() {
     });
   }
 
-=======
->>>>>>> e168ec7a30b1ba7bb9b9d89fd933be1baba89a38
   document.getElementById('product-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -291,7 +285,6 @@ async function renderProducts() {
       toast('Gagal: ' + err.message, true);
     }
   });
-<<<<<<< HEAD
 
   document.getElementById('catalog-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -315,8 +308,6 @@ async function renderProducts() {
       toast('Gagal: ' + err.message, true);
     }
   });
-=======
->>>>>>> e168ec7a30b1ba7bb9b9d89fd933be1baba89a38
 }
 
 // ---------- Orders ----------
