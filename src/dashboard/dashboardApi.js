@@ -68,6 +68,7 @@ router.get('/guilds/:guildId/meta', (req, res) => {
   res.json({ guildName: guild.name, guildIcon: guild.iconURL(), channels, roles });
 });
 
+<<<<<<< HEAD
 // --- PRODUCT CATALOG (post all active products as embed to a channel) ---
 
 router.post('/guilds/:guildId/catalog', async (req, res) => {
@@ -115,6 +116,8 @@ router.post('/guilds/:guildId/catalog', async (req, res) => {
   }
 });
 
+=======
+>>>>>>> e168ec7a30b1ba7bb9b9d89fd933be1baba89a38
 // --- BROADCAST (send message/embed/file/link to any channel) ---
 
 router.post('/guilds/:guildId/broadcast', async (req, res) => {
