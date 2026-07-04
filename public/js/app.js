@@ -224,7 +224,11 @@ async function renderProducts() {
         <label>Judul Embed (opsional)</label>
         <input name="title" placeholder="🛒 Katalog Produk MICROSTORE">
         <label>Deskripsi Embed (opsional)</label>
-        <textarea name="description" rows="2" placeholder="Berikut daftar produk yang tersedia..."></textarea>
+        <textarea name="description" rows="2" placeholder="Klik tombol di bawah untuk membuat ticket order..."></textarea>
+        <label style="display:flex; align-items:center; gap:0.5rem; margin-top:0.6rem;">
+          <input type="checkbox" name="show_products" style="width:auto;">
+          Tampilkan daftar produk aktif di embed (opsional)
+        </label>
         <label>Warna Embed</label>
         <input name="color" type="color" value="#5865f2">
         <label>URL Banner (opsional)</label>
@@ -301,6 +305,7 @@ async function renderProducts() {
         description: fd.get('description'),
         color: fd.get('color'),
         banner_url: fd.get('banner_url'),
+        show_products: e.target.querySelector('[name="show_products"]').checked,
       });
       toast('Katalog berhasil dikirim ke channel');
       e.target.reset();

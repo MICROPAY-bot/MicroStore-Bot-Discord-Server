@@ -1,6 +1,6 @@
 const express = require('express');
 const fs = require('fs');
-const { EmbedBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const settingsRepo = require('../repositories/settingsRepo');
 const { postVerifyPanel } = require('../bot/utils/verifyPanel');
 const productRepo = require('../repositories/productRepo');
@@ -74,41 +74,49 @@ router.post('/guilds/:guildId/catalog', async (req, res) => {
   const guild = discordClient?.guilds.cache.get(req.params.guildId);
   if (!guild) return res.status(404).json({ error: 'Bot belum bergabung ke server ini.' });
 
-  const { channel_id, title, description, color, banner_url } = req.body;
+  const { channel_id, title, description, color, banner_url, show_products } = req.body;
   if (!channel_id) return res.status(400).json({ error: 'Channel wajib dipilih.' });
 
   const channel = guild.channels.cache.get(channel_id);
   if (!channel || !channel.isTextBased()) return res.status(400).json({ error: 'Channel tidak valid.' });
 
-  const products = productRepo.listActive(req.params.guildId);
-  if (!products.length) return res.status(400).json({ error: 'Belum ada produk aktif.' });
-
   const embed = new EmbedBuilder()
     .setTitle(title || '🛒 Katalog Produk MICROSTORE')
-    .setDescription(description || 'Berikut adalah daftar produk yang tersedia. Klik **Buat Pesanan** di channel order untuk membeli.')
+    .setDescription(description || 'Klik tombol di bawah untuk membuat ticket order dan melihat produk yang tersedia.')
     .setColor(color ? parseInt(color.replace('#', ''), 16) : 0x5865f2);
 
-  // Add each product as a field
-  products.forEach((p) => {
-    const typeLabel = {
-      general: '📦 General',
-      joki_quest: '🎮 Joki Quest',
-      auto_quest_vip: '⚡ Auto Quest VIP',
-      web_panel: '🌐 Web Panel',
-    }[p.type] || p.type;
+  // Product fields are optional - only add them if explicitly requested and products exist.
+  if (show_products) {
+    const products = productRepo.listActive(req.params.guildId);
+    products.forEach((p) => {
+      const typeLabel = {
+        general: '📦 General',
+        joki_quest: '🎮 Joki Quest',
+        auto_quest_vip: '⚡ Auto Quest VIP',
+        web_panel: '🌐 Web Panel',
+      }[p.type] || p.type;
 
-    embed.addFields({
-      name: `${p.name}`,
-      value: `💰 **Rp${p.price.toLocaleString('id-ID')}**\n${typeLabel}${p.description ? `\n${p.description}` : ''}`,
-      inline: true,
+      embed.addFields({
+        name: `${p.name}`,
+        value: `💰 **Rp${p.price.toLocaleString('id-ID')}**\n${typeLabel}${p.description ? `\n${p.description}` : ''}`,
+        inline: true,
+      });
     });
-  });
+  }
 
   if (banner_url) embed.setImage(banner_url);
   embed.setTimestamp().setFooter({ text: 'MICROSTORE — Order sekarang!' });
 
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('order_panel_create_ticket')
+      .setLabel('Buat Pesanan')
+      .setEmoji('🛒')
+      .setStyle(ButtonStyle.Primary)
+  );
+
   try {
-    await channel.send({ embeds: [embed] });
+    await channel.send({ embeds: [embed], components: [row] });
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: 'Gagal mengirim katalog: ' + err.message });
