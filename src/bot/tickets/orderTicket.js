@@ -1,7 +1,10 @@
 const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const TicketService = require('../../services/TicketService');
 const ProductService = require('../../services/ProductService');
+<<<<<<< HEAD
 const settingsRepo = require('../../repositories/settingsRepo');
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
 
 /**
  * Create a private order channel and let the buyer pick a product to purchase.
@@ -17,12 +20,17 @@ module.exports = async function createOrderTicket(interaction, quantity = 1) {
   );
 
   if (!products.length) {
+<<<<<<< HEAD
     const settings = settingsRepo.get(interaction.guild.id);
     const message =
       settings?.empty_catalog_message || '⚠️ Belum ada produk yang tersedia. Hubungi admin untuk menambahkan produk.';
 
     await channel.send({
       content: `<@${interaction.user.id}>\n\n${message}`,
+=======
+    await channel.send({
+      content: '⚠️ Belum ada produk yang tersedia. Hubungi admin untuk menambahkan produk.',
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
       components: [closeRow],
     });
     return channel;

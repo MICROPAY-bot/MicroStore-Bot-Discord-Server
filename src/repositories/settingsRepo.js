@@ -76,11 +76,14 @@ module.exports = {
     db.prepare(`UPDATE settings SET testimonial_banner_url = ? WHERE guild_id = ?`).run(url || null, guildId);
   },
 
+<<<<<<< HEAD
   setEmptyCatalogMessage(guildId, message) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET empty_catalog_message = ? WHERE guild_id = ?`).run(message || null, guildId);
   },
 
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
   setBuyerRole(guildId, roleId) {
     this.ensure(guildId);
     db.prepare(`UPDATE settings SET buyer_role = ? WHERE guild_id = ?`).run(roleId, guildId);

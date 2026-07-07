@@ -72,7 +72,10 @@ ensureColumn('settings', 'bump_reminder_enabled', 'INTEGER DEFAULT 0');
 ensureColumn('settings', 'unverified_role', 'TEXT');
 ensureColumn('settings', 'rating_channel', 'TEXT');
 ensureColumn('settings', 'testimonial_banner_url', 'TEXT');
+<<<<<<< HEAD
 ensureColumn('settings', 'empty_catalog_message', 'TEXT');
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
 ensureColumn('orders', 'quantity', 'INTEGER DEFAULT 1');
 
 // Ratings table

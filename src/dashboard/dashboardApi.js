@@ -237,7 +237,10 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     unverified_role,
     rating_channel,
     testimonial_banner_url,
+<<<<<<< HEAD
     empty_catalog_message,
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
   } = req.body;
 
   settingsRepo.ensure(guildId);
@@ -297,7 +300,10 @@ router.put('/guilds/:guildId/settings', (req, res) => {
   if (unverified_role !== undefined) settingsRepo.setUnverifiedRole(guildId, unverified_role);
   if (rating_channel !== undefined) settingsRepo.setRatingChannel(guildId, rating_channel);
   if (testimonial_banner_url !== undefined) settingsRepo.setTestimonialBanner(guildId, testimonial_banner_url);
+<<<<<<< HEAD
   if (empty_catalog_message !== undefined) settingsRepo.setEmptyCatalogMessage(guildId, empty_catalog_message);
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
 
   res.json(settingsRepo.get(guildId));
 });

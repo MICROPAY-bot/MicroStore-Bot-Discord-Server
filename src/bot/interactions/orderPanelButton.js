@@ -1,7 +1,10 @@
 const { ActionRowBuilder, StringSelectMenuBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 const TicketService = require('../../services/TicketService');
 const ProductService = require('../../services/ProductService');
+<<<<<<< HEAD
 const settingsRepo = require('../../repositories/settingsRepo');
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
 
 module.exports = {
   customId: 'order_panel_create_ticket',
@@ -16,6 +19,7 @@ module.exports = {
     );
 
     if (!products.length) {
+<<<<<<< HEAD
       const settings = settingsRepo.get(interaction.guild.id);
       const message =
         settings?.empty_catalog_message ||
@@ -23,6 +27,10 @@ module.exports = {
 
       await channel.send({
         content: `<@${interaction.user.id}>\n\n${message}`,
+=======
+      await channel.send({
+        content: '⚠️ Belum ada produk yang tersedia saat ini. Hubungi admin untuk info lebih lanjut.',
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
         components: [closeRow],
       });
       return;

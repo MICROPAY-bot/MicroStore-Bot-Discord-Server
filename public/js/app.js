@@ -178,10 +178,14 @@ function statCard(label, value) {
 // ---------- Products ----------
 
 async function renderProducts() {
+<<<<<<< HEAD
   const [products, settings] = await Promise.all([
     Api.get(`/api/dashboard/guilds/${state.guildId}/products`),
     Api.get(`/api/dashboard/guilds/${state.guildId}/settings`),
   ]);
+=======
+  const products = await Api.get(`/api/dashboard/guilds/${state.guildId}/products`);
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
 
   content.innerHTML = `
     <h1 class="page-title">Produk</h1>
@@ -218,6 +222,7 @@ async function renderProducts() {
 
     <div class="hud-panel">
       <span class="corner-bl"></span><span class="corner-br"></span>
+<<<<<<< HEAD
       <div class="panel-title">💬 Pesan Ticket Saat Belum Ada Produk</div>
       <form id="empty-message-form">
         <label>Pesan ini muncul di ticket order kalau belum ada produk aktif</label>
@@ -228,6 +233,8 @@ async function renderProducts() {
 
     <div class="hud-panel">
       <span class="corner-bl"></span><span class="corner-br"></span>
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
       <div class="panel-title">📋 Kirim Katalog Produk ke Channel</div>
       <form id="catalog-form">
         <label>Channel Tujuan</label>
@@ -303,6 +310,7 @@ async function renderProducts() {
     }
   });
 
+<<<<<<< HEAD
   document.getElementById('empty-message-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
@@ -316,6 +324,8 @@ async function renderProducts() {
     }
   });
 
+=======
+>>>>>>> cf701dac3136995c469d9b91b0423f79d64730cb
   document.getElementById('catalog-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const fd = new FormData(e.target);
