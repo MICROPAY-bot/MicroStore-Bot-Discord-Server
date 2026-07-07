@@ -238,7 +238,6 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     rating_channel,
     testimonial_banner_url,
     empty_catalog_message,
-empty_catalog_message,
   } = req.body;
   settingsRepo.ensure(guildId);
   if (welcome_message !== undefined) settingsRepo.setWelcomeMessage(guildId, welcome_message);
