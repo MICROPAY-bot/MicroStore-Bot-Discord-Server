@@ -23,8 +23,6 @@ module.exports = {
 
       await channel.send({
         content: `<@${interaction.user.id}>\n\n${message}`,
-      await channel.send({
-        content: '⚠️ Belum ada produk yang tersedia saat ini. Hubungi admin untuk info lebih lanjut.',
         components: [closeRow],
       });
       return;

@@ -23,8 +23,6 @@ module.exports = async function createOrderTicket(interaction, quantity = 1) {
 
     await channel.send({
       content: `<@${interaction.user.id}>\n\n${message}`,
-    await channel.send({
-      content: '⚠️ Belum ada produk yang tersedia. Hubungi admin untuk menambahkan produk.',
       components: [closeRow],
     });
     return channel;
