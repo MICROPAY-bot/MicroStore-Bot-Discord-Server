@@ -373,9 +373,9 @@ router.post('/guilds/:guildId/welcome-panel/send-test', async (req, res) => {
 
       if (settings.welcome_banner_url) embed.setImage(settings.welcome_banner_url);
 
-      await channel.send({ content: '🧪 **Preview Welcome Message:**', embeds: [embed] });
+      await channel.send({ embeds: [embed] });
     } else {
-      await channel.send({ content: `🧪 **Preview Welcome Message:**\n${formatted}` });
+      await channel.send({ content: formatted });
     }
 
     res.json({ success: true });
