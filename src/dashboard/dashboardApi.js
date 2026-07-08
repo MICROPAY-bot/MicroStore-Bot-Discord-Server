@@ -239,6 +239,7 @@ router.put('/guilds/:guildId/settings', (req, res) => {
     testimonial_banner_url,
     empty_catalog_message,
   } = req.body;
+
   settingsRepo.ensure(guildId);
   if (welcome_message !== undefined) settingsRepo.setWelcomeMessage(guildId, welcome_message);
   if (welcome_role !== undefined) settingsRepo.setWelcomeRole(guildId, welcome_role);
@@ -297,7 +298,7 @@ router.put('/guilds/:guildId/settings', (req, res) => {
   if (rating_channel !== undefined) settingsRepo.setRatingChannel(guildId, rating_channel);
   if (testimonial_banner_url !== undefined) settingsRepo.setTestimonialBanner(guildId, testimonial_banner_url);
   if (empty_catalog_message !== undefined) settingsRepo.setEmptyCatalogMessage(guildId, empty_catalog_message);
-if (empty_catalog_message !== undefined) settingsRepo.setEmptyCatalogMessage(guildId, empty_catalog_message);
+
   res.json(settingsRepo.get(guildId));
 });
 
@@ -331,6 +332,55 @@ router.post('/guilds/:guildId/verify-panel/repost', async (req, res) => {
     res.json({ success: true, messageId: sent.id });
   } catch (err) {
     res.status(500).json({ error: 'Gagal mengirim ulang panel: ' + err.message });
+  }
+});
+
+// Send a preview/test of the welcome message (using the logged-in admin as the "new member")
+// so admins can see exactly what real new members will receive, without waiting for someone to join.
+router.post('/guilds/:guildId/welcome-panel/send-test', async (req, res) => {
+  const guild = discordClient?.guilds.cache.get(req.params.guildId);
+  if (!guild) {
+    return res.status(404).json({ error: 'Bot belum bergabung ke server ini.' });
+  }
+
+  const settings = settingsRepo.get(req.params.guildId);
+  if (!settings || !settings.welcome_channel) {
+    return res.status(400).json({ error: 'Channel welcome belum dipilih. Pilih channel dulu lalu Save.' });
+  }
+
+  const channel = guild.channels.cache.get(settings.welcome_channel);
+  if (!channel || !channel.isTextBased()) {
+    return res.status(400).json({ error: 'Channel welcome tidak ditemukan.' });
+  }
+
+  const adminUserId = req.session?.discordUser?.id;
+  let member = null;
+  if (adminUserId) {
+    member = await guild.members.fetch(adminUserId).catch(() => null);
+  }
+
+  const message = settings.welcome_message || `👋 Selamat datang {user} di {server}`;
+  const mention = member ? `<@${member.id}>` : '@NewMember';
+  const formatted = message.replace(/{user}/g, mention).replace(/{server}/g, guild.name);
+
+  try {
+    if (settings.welcome_embed_enabled) {
+      const embed = new EmbedBuilder()
+        .setColor(settings.welcome_embed_color ? parseInt(settings.welcome_embed_color.replace('#', ''), 16) : 0x5865f2)
+        .setTitle(settings.welcome_embed_title || `👋 Selamat Datang!`)
+        .setDescription(formatted)
+        .setThumbnail(settings.welcome_thumbnail_url || member?.user.displayAvatarURL() || null);
+
+      if (settings.welcome_banner_url) embed.setImage(settings.welcome_banner_url);
+
+      await channel.send({ content: '🧪 **Preview Welcome Message:**', embeds: [embed] });
+    } else {
+      await channel.send({ content: `🧪 **Preview Welcome Message:**\n${formatted}` });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Gagal mengirim preview: ' + err.message });
   }
 });
 

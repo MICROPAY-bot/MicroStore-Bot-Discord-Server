@@ -640,6 +640,10 @@ async function renderSettings() {
           <input name="welcome_banner_url" value="${escapeHtml(settings.welcome_banner_url || '')}" placeholder="https://...">
           <label>URL Thumbnail (kecil di kanan atas, default: avatar member)</label>
           <input name="welcome_thumbnail_url" value="${escapeHtml(settings.welcome_thumbnail_url || '')}" placeholder="https://...">
+
+          <div style="margin-top:0.8rem;">
+            <button type="button" id="send-welcome-test-btn" class="btn btn-ghost btn-sm">📨 Simpan &amp; Kirim ke Channel (Preview)</button>
+          </div>
         </div>
 
         <div class="hud-panel">
@@ -729,6 +733,22 @@ async function renderSettings() {
       await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
       await Api.post(`/api/dashboard/guilds/${state.guildId}/verify-panel/repost`, {});
       toast('Panel verifikasi berhasil dikirim ulang ke channel');
+    } catch (err) {
+      toast('Gagal: ' + err.message, true);
+    }
+  });
+
+  document.getElementById('send-welcome-test-btn').addEventListener('click', async () => {
+    const form = document.getElementById('settings-form');
+    const fd = new FormData(form);
+    const body = Object.fromEntries(fd.entries());
+    body.welcome_embed_enabled = form.querySelector('[name="welcome_embed_enabled"]').checked ? 1 : 0;
+    body.bump_reminder_enabled = form.querySelector('[name="bump_reminder_enabled"]').checked ? 1 : 0;
+
+    try {
+      await Api.put(`/api/dashboard/guilds/${state.guildId}/settings`, body);
+      await Api.post(`/api/dashboard/guilds/${state.guildId}/welcome-panel/send-test`, {});
+      toast('Preview welcome berhasil dikirim ke channel');
     } catch (err) {
       toast('Gagal: ' + err.message, true);
     }
